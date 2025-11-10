@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Camera Capture & Download</title>
+<style>
+  body {
+    font-family: sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #f5f5f5;
+    min-height: 100vh;
+    margin: 0;
+    padding: 10px;
+  }
+
+  #cam {
+    width: 100%;
+    max-width: 600px;
+    border: 2px solid #000;
+    border-radius: 10px;
+    background: #000;
+  }
+
+  .panel {
+    margin-top: 15px;
+    text-align: center;
+  }
+
+  button {
+    margin: 5px;
+    padding: 10px 18px;
+    font-size: 16px;
+    border: none;
+    border-radius: 8px;
+    background-color: #0078ff;
+    color: white;
+    cursor: pointer;
+  }
+
+  button:hover {
+    background-color: #005fcc;
+  }
+
+  #photo {
+    display: none;
+    width: 100%;
+    max-width: 600px;
+    margin-top: 10px;
+    border: 2px dashed #333;
+    border-radius: 10px;
+  }
+</style>
+</head>
+<body>
+
+<video id="cam" autoplay muted playsinline></video>
+<canvas id="canvas" style="display:none"></canvas>
+
+<div class="panel">
+  <button id="switchFrontBtn">Front Camera</button>
+  <button id="switchBackBtn">Back Camera</button>
+  <button id="snapBtn">Snap</button>
+  <button id="downloadBtn" style="display:none; background:#34c759;">Download Photo</button>
+  <button id="stopBtn" style="background:#ff3b30;">Camera Off</button>
+</div>
+
+<img id="photo" alt="Captured photo will appear here.">
+
+<script>
+let mediaStream = null;
+let currentFacingMode = "environment"; // default back camera
+let capturedImage = null;
+
+const video = document.getElementById("cam");
+const canvas = document.getElementById("canvas");
+const photo = document.getElementById("photo");
+const snapBtn = document.getElementById("snapBtn");
+const downloadBtn = document.getElementById("downloadBtn");
+const switchFrontBtn = document.getElementById("switchFrontBtn");
+const switchBackBtn = document.getElementById("switchBackBtn");
+const stopBtn = document.getElementById("stopBtn");
+
+// Start camera stream
+async function getMediaStream() {
+  if (mediaStream) {
+    mediaStream.getTracks().forEach(track => track.stop());
+  }
+
+  const constraints = {
+    audio: false,
+    video: { facingMode: currentFacingMode }
+  };
+
+  try {
+    mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+    video.srcObject = mediaStream;
+  } catch (err) {
+    console.error("Camera error:", err);
+    alert("Camera not available or permission denied.");
+  }
+}
+
+// Capture photo
+snapBtn.addEventListener("click", () => {
+  if (!mediaStream) return;
+  const context = canvas.getContext("2d");
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  context.drawImage(video, 0, 0, canvas.width, canvas.height);
+  capturedImage = canvas.toDataURL("image/png");
+  photo.src = capturedImage;
+  photo.style.display = "block";
+  downloadBtn.style.display = "inline-block";
+});
+
+// Download photo
+downloadBtn.addEventListener("click", () => {
+  if (!capturedImage) return;
+  const a = document.createElement("a");
+  a.href = capturedImage;
+  a.download = "captured_photo.png";
+  a.click();
+});
+
+// Switch cameras
+switchFrontBtn.addEventListener("click", () => {
+  currentFacingMode = "user";
+  getMediaStream();
+});
+
+switchBackBtn.addEventListener("click", () => {
+  currentFacingMode = "environment";
+  getMediaStream();
+});
+
+// Stop camera manually
+stopBtn.addEventListener("click", () => {
+  if (mediaStream) {
+    mediaStream.getTracks().forEach(track => track.stop());
+    mediaStream = null;
+    video.srcObject = null;
+    alert("Camera turned off.");
+  }
+});
+
+// Start default (back) camera
+getMediaStream();
+</script>
+
+</body>
+</html>
